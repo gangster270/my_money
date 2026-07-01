@@ -154,6 +154,14 @@
   .catgrid button{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 4px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:var(--ink);transition:.12s;}
   .catgrid button .e{font-size:20px;}
   .catgrid button.on{border-color:var(--brand);background:var(--brand-soft);}
+  .catgrid button.addcat{border-style:dashed;color:var(--muted);}
+  .swatchwrap{display:flex;flex-wrap:wrap;gap:9px;}
+  .swatch{width:32px;height:32px;border-radius:9px;cursor:pointer;border:2px solid transparent;transition:.12s;}
+  .swatch.on{border-color:var(--ink);transform:scale(1.06);}
+  .emojisug{display:flex;flex-wrap:wrap;gap:6px;}
+  .emojisug button{border:1px solid var(--line);background:var(--card);border-radius:9px;width:36px;height:36px;font-size:18px;cursor:pointer;transition:.12s;}
+  .emojisug button.on{border-color:var(--brand);background:var(--brand-soft);}
+  .catbadge{font-size:10px;font-weight:700;color:var(--muted);background:var(--paper);border-radius:6px;padding:1px 7px;margin-left:6px;}
   .chips{display:flex;flex-wrap:wrap;gap:7px;}
   .chip{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:9px 13px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;font-family:inherit;transition:.12s;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;}
   .chip.on{border-color:var(--brand);background:var(--brand-soft);color:var(--brand);}
@@ -357,11 +365,41 @@
   </div>
 </div>
 
+<!-- 분류 관리 시트 -->
+<div class="overlay" id="catManageOverlay">
+  <div class="sheet">
+    <h3>분류 관리 <span class="add" id="catAddBtn">＋ 분류 추가</span></h3>
+    <div class="seg" id="catTypeSeg" style="margin-bottom:16px;"><button data-v="expense" class="on">지출</button><button data-v="income">수입</button></div>
+    <div id="catList"></div>
+    <div class="actions" style="margin-top:18px;"><button class="btn ghost" id="catManageClose" style="flex:1;">닫기</button></div>
+  </div>
+</div>
+
+<!-- 분류 입력 시트 -->
+<div class="overlay" id="catFormOverlay">
+  <div class="sheet">
+    <h3 id="catFormTitle">분류 추가</h3>
+    <div class="field"><label>분류 이름</label><input id="cfCatName" placeholder="예: 구독, 반려동물, 육아" autocomplete="off"></div>
+    <div class="field"><label>아이콘</label>
+      <input id="cfCatEmoji" maxlength="4" placeholder="이모지 입력" autocomplete="off" style="margin-bottom:9px;">
+      <div class="emojisug" id="emojiSug"></div>
+    </div>
+    <div class="field"><label>색상</label><div class="swatchwrap" id="colorSwatch"></div></div>
+    <div class="actions">
+      <button class="btn danger" id="catDel" style="display:none">삭제</button>
+      <button class="btn ghost" id="catCancel">취소</button>
+      <button class="btn primary" id="catSave">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- 메뉴 시트 -->
 <div class="overlay" id="menuOverlay">
   <div class="sheet">
     <h3>백업 · 설정</h3>
     <div class="menu-list">
+      <button id="menuCat"><span class="e">🏷️</span> 분류 관리 <small>구독 등 분류 추가·수정</small></button>
+      <div class="sep"></div>
       <button id="exportJson"><span class="e">💾</span> 백업 파일 저장 <small>이 PC로 내려받기 (.json)</small></button>
       <button id="importJson"><span class="e">📂</span> 백업 파일 불러오기 <small>다른 기기 / 복원</small></button>
       <div class="sep"></div>
@@ -378,15 +416,16 @@
 
 <script>
 /* ===== 카테고리 ===== */
-const CATS={
+const BUILTIN={
   expense:[
     {id:'food',n:'식비',e:'🍚',c:'#D96A4A'},{id:'cafe',n:'카페·간식',e:'☕',c:'#C98A5E'},
     {id:'daily',n:'생활용품',e:'🧺',c:'#7FA98C'},{id:'shopping',n:'쇼핑·의류',e:'🛍️',c:'#C77BA0'},
     {id:'beauty',n:'미용·뷰티',e:'💄',c:'#D98AA8'},{id:'health',n:'의료·건강',e:'💊',c:'#6FA8B0'},
     {id:'transport',n:'교통',e:'🚌',c:'#6E8AC0'},{id:'home',n:'주거·관리',e:'🏠',c:'#8E8466'},
-    {id:'comm',n:'통신',e:'📱',c:'#7D8AA0'},{id:'culture',n:'문화·여가',e:'🎬',c:'#A07BC7'},
-    {id:'event',n:'경조사',e:'🎁',c:'#C0607A'},{id:'edu',n:'자기계발',e:'📚',c:'#5E97A0'},
-    {id:'saving',n:'저축·투자',e:'🌱',c:'#3A9E6F'},{id:'etc_e',n:'기타',e:'✏️',c:'#9A9A94'}
+    {id:'comm',n:'통신',e:'📱',c:'#7D8AA0'},{id:'subs',n:'구독',e:'🔁',c:'#8A76C4'},
+    {id:'culture',n:'문화·여가',e:'🎬',c:'#A07BC7'},{id:'event',n:'경조사',e:'🎁',c:'#C0607A'},
+    {id:'edu',n:'자기계발',e:'📚',c:'#5E97A0'},{id:'saving',n:'저축·투자',e:'🌱',c:'#3A9E6F'},
+    {id:'etc_e',n:'기타',e:'✏️',c:'#9A9A94'}
   ],
   income:[
     {id:'salary',n:'급여',e:'💰',c:'#2F9E6F'},{id:'side',n:'부수입',e:'✨',c:'#5BB58A'},
@@ -394,7 +433,9 @@ const CATS={
     {id:'etc_i',n:'기타',e:'➕',c:'#9A9A94'}
   ]
 };
-function findCat(type,id){return (CATS[type]||[]).find(c=>c.id===id)||{n:'기타',e:'•',c:'#9A9A94'};}
+function allCats(type){return BUILTIN[type].concat((DB.cats&&DB.cats[type])?DB.cats[type]:[]);}
+function pickerCats(type){return allCats(type).filter(c=>!c.hidden);}
+function findCat(type,id){return allCats(type).find(c=>c.id===id)||{n:'기타',e:'•',c:'#9A9A94'};}
 
 /* ===== 결제수단 (즉시형) ===== */
 const METHODS=[
@@ -402,12 +443,15 @@ const METHODS=[
   {id:'check',n:'체크카드',e:'💳'},{id:'pay',n:'간편페이',e:'📲'}
 ];
 const CARD_COLORS=['#6E8AC0','#C77BA0','#5E97A0','#C98A5E','#7FA98C','#A07BC7','#C0607A','#8E8466'];
+const CAT_COLORS=['#D96A4A','#C98A5E','#7FA98C','#C77BA0','#D98AA8','#6FA8B0','#6E8AC0','#8E8466','#7D8AA0','#8A76C4','#A07BC7','#C0607A','#5E97A0','#3A9E6F','#4C9A8E','#B5651D'];
+const CAT_EMOJIS=['🔁','📺','🎬','🎵','🎮','☁️','🤖','📱','🏋️','🧘','📚','🎓','🍔','☕','🚗','🐶','🐱','👶','🎁','💊','✈️','💡','🧾','🛒','💳','🌱','💄','🏠','📦','🍷'];
 
 /* ===== 데이터 ===== */
 const KEY='gagyebu_data_v1';
-let DB={transactions:[],budgets:{},recurring:[],cards:[],settings:{defMethod:'check',defCardId:null}};
+let DB={transactions:[],budgets:{},recurring:[],cards:[],cats:{expense:[],income:[]},settings:{defMethod:'check',defCardId:null}};
 function load(){try{const r=localStorage.getItem(KEY);if(r)DB=JSON.parse(r);}catch(e){}
   DB.transactions=DB.transactions||[];DB.budgets=DB.budgets||{};DB.recurring=DB.recurring||[];DB.cards=DB.cards||[];
+  DB.cats=DB.cats||{expense:[],income:[]};DB.cats.expense=DB.cats.expense||[];DB.cats.income=DB.cats.income||[];
   DB.settings=DB.settings||{};if(!DB.settings.defMethod)DB.settings.defMethod='check';if(DB.settings.defCardId===undefined)DB.settings.defCardId=null;}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){toast('저장 공간을 확인해 주세요');}}
 
@@ -418,6 +462,7 @@ let cardTrendMode='use';
 let editId=null, formType='expense', formCat='food', formMethod='check', formCardId=null, addCount=0;
 let editRecurId=null, recurCat='home', recurMethod='transfer', recurCardId=null;
 let editCardId=null, settleCardId=null;
+let catType='expense', editCatId=null, catEmoji='🔁', catColor=CAT_COLORS[9], catReturn=null;
 
 /* ===== 유틸 ===== */
 const won=n=>n.toLocaleString('ko-KR')+'원';
@@ -740,8 +785,11 @@ function renderManage(){
 }
 function buildRecurCatGrid(){
   const g=document.getElementById('rfCatGrid');
-  g.innerHTML=CATS.expense.map(c=>'<button data-id="'+c.id+'" class="'+(c.id===recurCat?'on':'')+'"><span class="e">'+c.e+'</span>'+c.n+'</button>').join('');
-  g.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{recurCat=b.dataset.id;g.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');}));
+  g.innerHTML=pickerCats('expense').map(c=>'<button data-id="'+c.id+'" class="'+(c.id===recurCat?'on':'')+'"><span class="e">'+c.e+'</span>'+c.n+'</button>').join('')
+    +'<button class="addcat" data-addcat="1"><span class="e">＋</span>추가</button>';
+  g.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    if(b.dataset.addcat){catReturn='recur';openCatForm('expense',null);return;}
+    recurCat=b.dataset.id;g.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');}));
 }
 function openRecurAdd(){
   editRecurId=null;recurCat='home';recurMethod='transfer';recurCardId=null;
@@ -792,17 +840,86 @@ function togglePay(rid){
   else{DB.transactions.push({id:uid(),type:'expense',category:r.category,amount:r.amount,date:dayInMonth(r.day),memo:r.name,method:r.method||'transfer',cardId:r.cardId||null,fixedId:rid});save();render();toast('납부 처리했어요 ✓');}
 }
 
+/* ===== 분류 관리 ===== */
+function renderCatManage(){
+  document.querySelectorAll('#catTypeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===catType));
+  const el=document.getElementById('catList');
+  const builtin=BUILTIN[catType], custom=(DB.cats[catType]||[]).filter(c=>!c.hidden);
+  const rows=builtin.map(c=>catRow(c,false)).join('')+custom.map(c=>catRow(c,true)).join('');
+  el.innerHTML=rows;
+  el.querySelectorAll('[data-editcat]').forEach(row=>row.addEventListener('click',e=>{if(e.target.closest('[data-delcat]'))return;openCatForm(catType,row.dataset.editcat);}));
+  el.querySelectorAll('[data-delcat]').forEach(b=>b.addEventListener('click',()=>delCat(b.dataset.delcat)));
+}
+function catRow(c,custom){
+  return '<div class="manage-row"'+(custom?' data-editcat="'+c.id+'"':'')+'><div class="ic" style="background:'+c.c+'1F">'+c.e+'</div>'
+    +'<div class="body"><div class="nm">'+esc(c.n)+(custom?'':'<span class="catbadge">기본</span>')+'</div></div>'
+    +(custom?'<button class="del" data-delcat="'+c.id+'">✕</button>':'')+'</div>';
+}
+function buildEmojiSug(){
+  const el=document.getElementById('emojiSug');
+  el.innerHTML=CAT_EMOJIS.map(e=>'<button data-e="'+e+'" class="'+(e===catEmoji?'on':'')+'">'+e+'</button>').join('');
+  el.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{catEmoji=b.dataset.e;document.getElementById('cfCatEmoji').value=catEmoji;el.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.e===catEmoji));}));
+}
+function buildColorSwatch(){
+  const el=document.getElementById('colorSwatch');
+  el.innerHTML=CAT_COLORS.map(c=>'<div class="swatch'+(c===catColor?' on':'')+'" data-c="'+c+'" style="background:'+c+'"></div>').join('');
+  el.querySelectorAll('.swatch').forEach(s=>s.addEventListener('click',()=>{catColor=s.dataset.c;el.querySelectorAll('.swatch').forEach(x=>x.classList.toggle('on',x.dataset.c===catColor));}));
+}
+function openCatForm(type,id){
+  catType=type;
+  if(id){const c=(DB.cats[type]||[]).find(x=>x.id===id);if(!c)return;editCatId=id;catEmoji=c.e;catColor=c.c;
+    document.getElementById('catFormTitle').textContent='분류 수정';document.getElementById('catDel').style.display='block';
+    document.getElementById('cfCatName').value=c.n;
+  }else{editCatId=null;catEmoji='🔁';catColor=CAT_COLORS[9];
+    document.getElementById('catFormTitle').textContent='분류 추가';document.getElementById('catDel').style.display='none';
+    document.getElementById('cfCatName').value='';
+  }
+  document.getElementById('cfCatEmoji').value=catEmoji;
+  buildEmojiSug();buildColorSwatch();
+  openSheet('catFormOverlay');setTimeout(()=>document.getElementById('cfCatName').focus(),250);
+}
+function saveCat(){
+  const name=document.getElementById('cfCatName').value.trim();
+  let emo=(document.getElementById('cfCatEmoji').value||'').trim()||catEmoji||'🏷️';
+  emo=Array.from(emo)[0]||'🏷️';
+  if(!name){toast('분류 이름을 입력해 주세요');return;}
+  DB.cats[catType]=DB.cats[catType]||[];
+  if(editCatId){const c=DB.cats[catType].find(x=>x.id===editCatId);Object.assign(c,{n:name,e:emo,c:catColor});}
+  else{DB.cats[catType].push({id:'c'+uid(),n:name,e:emo,c:catColor});}
+  save();closeSheet('catFormOverlay');
+  const newId=editCatId||DB.cats[catType][DB.cats[catType].length-1].id;
+  if(catReturn==='add'){formType=catType;formCat=newId;buildCatGrid();}
+  else if(catReturn==='recur'){recurCat=newId;buildRecurCatGrid();}
+  else{renderCatManage();}
+  catReturn=null;render();toast(editCatId?'수정했어요':'분류를 추가했어요 ✓');
+}
+function delCat(id){
+  const c=(DB.cats[catType]||[]).find(x=>x.id===id);if(!c)return;
+  const used=DB.transactions.some(t=>t.category===id)||DB.recurring.some(r=>r.category===id);
+  if(used){
+    if(!confirm('"'+c.n+'" 분류를 목록에서 숨길까요?\n이 분류로 기록된 과거 내역은 그대로 유지돼요.'))return;
+    c.hidden=true; // 과거 내역 표시를 위해 정보는 보존
+  }else{
+    if(!confirm('"'+c.n+'" 분류를 삭제할까요?'))return;
+    DB.cats[catType]=DB.cats[catType].filter(x=>x.id!==id);
+  }
+  save();renderCatManage();render();toast('처리했어요');
+}
+
 /* ===== 거래 입력 ===== */
 function buildCatGrid(){
   const g=document.getElementById('catGrid');
-  g.innerHTML=CATS[formType].map(c=>'<button data-id="'+c.id+'" class="'+(c.id===formCat?'on':'')+'"><span class="e">'+c.e+'</span>'+c.n+'</button>').join('');
-  g.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{formCat=b.dataset.id;g.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');}));
+  g.innerHTML=pickerCats(formType).map(c=>'<button data-id="'+c.id+'" class="'+(c.id===formCat?'on':'')+'"><span class="e">'+c.e+'</span>'+c.n+'</button>').join('')
+    +'<button class="addcat" data-addcat="1"><span class="e">＋</span>추가</button>';
+  g.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    if(b.dataset.addcat){catReturn='add';openCatForm(formType,null);return;}
+    formCat=b.dataset.id;g.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');}));
 }
 function setType(t){
   formType=t;
   document.querySelectorAll('#typeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===t));
   document.getElementById('methodField').style.display=(t==='expense')?'block':'none';
-  if(!CATS[t].some(c=>c.id===formCat))formCat=CATS[t][0].id;
+  if(!pickerCats(t).some(c=>c.id===formCat))formCat=pickerCats(t)[0].id;
   buildCatGrid();
 }
 function openAdd(){
@@ -863,6 +980,7 @@ function commaInput(el){el.addEventListener('input',e=>{const v=e.target.value.r
 
 /* 시트 제어 */
 function openSheet(id){document.getElementById(id).classList.add('open');}
+function closeSheet(id){document.getElementById(id).classList.remove('open');}
 function closeSheets(){document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('open'));}
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeSheets();}));
 
@@ -887,8 +1005,8 @@ document.getElementById('fileInput').addEventListener('change',e=>{
   r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.transactions)throw 0;if(confirm('현재 데이터를 불러온 파일로 덮어쓸까요?')){DB=d;load2(d);save();closeSheets();render();toast('불러왔어요 ✓');}}catch(_){toast('올바른 백업 파일이 아니에요');}};
   r.readAsText(f);e.target.value='';
 });
-function load2(d){d.budgets=d.budgets||{};d.recurring=d.recurring||[];d.cards=d.cards||[];d.settings=d.settings||{defMethod:'check',defCardId:null};}
-document.getElementById('resetAll').addEventListener('click',()=>{if(confirm('정말 모든 내역을 삭제할까요?\n되돌릴 수 없으니 백업을 먼저 권해요.')){DB={transactions:[],budgets:{},recurring:[],cards:[],settings:{defMethod:'check',defCardId:null}};save();closeSheets();render();toast('전체 삭제 완료');}});
+function load2(d){d.budgets=d.budgets||{};d.recurring=d.recurring||[];d.cards=d.cards||[];d.cats=d.cats||{expense:[],income:[]};d.cats.expense=d.cats.expense||[];d.cats.income=d.cats.income||[];d.settings=d.settings||{defMethod:'check',defCardId:null};}
+document.getElementById('resetAll').addEventListener('click',()=>{if(confirm('정말 모든 내역을 삭제할까요?\n되돌릴 수 없으니 백업을 먼저 권해요.')){DB={transactions:[],budgets:{},recurring:[],cards:[],cats:{expense:[],income:[]},settings:{defMethod:'check',defCardId:null}};save();closeSheets();render();toast('전체 삭제 완료');}});
 
 /* 예산 */
 document.getElementById('setBudget').addEventListener('click',()=>{
@@ -934,6 +1052,14 @@ document.getElementById('manageClose').onclick=closeSheets;
 document.getElementById('recurSave').onclick=saveRecur;
 document.getElementById('recurDel').onclick=delRecur;
 document.getElementById('recurCancel').onclick=()=>{closeSheets();openSheet('manageOverlay');};
+document.getElementById('menuCat').onclick=()=>{closeSheets();catType='expense';renderCatManage();openSheet('catManageOverlay');};
+document.getElementById('catManageClose').onclick=closeSheets;
+document.getElementById('catAddBtn').onclick=()=>{catReturn='manage';openCatForm(catType,null);};
+document.querySelectorAll('#catTypeSeg button').forEach(b=>b.addEventListener('click',()=>{catType=b.dataset.v;renderCatManage();}));
+document.getElementById('catSave').onclick=saveCat;
+document.getElementById('catDel').onclick=()=>{if(editCatId)delCat(editCatId);};
+document.getElementById('catCancel').onclick=()=>{closeSheet('catFormOverlay');catReturn=null;};
+document.getElementById('cfCatEmoji').addEventListener('input',e=>{const v=Array.from((e.target.value||'').trim())[0]||'';catEmoji=v;document.querySelectorAll('#emojiSug button').forEach(x=>x.classList.toggle('on',x.dataset.e===catEmoji));});
 
 /* 시작 */
 load();render();
