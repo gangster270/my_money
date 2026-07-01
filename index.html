@@ -98,6 +98,9 @@
   /* ── 고정지출 ── */
   .fx-summary{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:9px;}
   .fx-summary b{font-weight:700;}
+  .fx-period{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:var(--brand);background:var(--brand-soft);border-radius:9px;padding:7px 11px;margin:13px 0 4px;}
+  .keeprow{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);font-weight:600;margin:2px 2px 14px;cursor:pointer;user-select:none;}
+  .keeprow input{width:18px;height:18px;accent-color:var(--brand);cursor:pointer;margin:0;}
   .fx-insight{font-size:12.5px;color:var(--muted);background:var(--brand-soft);border-radius:12px;padding:11px 13px;margin:12px 0 6px;line-height:1.55;}
   .fx-insight b{color:var(--brand);font-weight:700;}
   .fx-row{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid #F1EEE7;}
@@ -270,9 +273,10 @@
     <div class="field"><label>분류</label><div class="catgrid" id="catGrid"></div></div>
     <div class="field"><label>날짜</label><input type="date" id="fDate"></div>
     <div class="field"><label>메모 <span style="font-weight:400;">(선택)</span></label><input id="fMemo" placeholder="예: 친구랑 저녁" autocomplete="off"></div>
+    <label class="keeprow" id="keepRow"><input type="checkbox" id="keepOpen" checked> 저장 후 계속 입력하기</label>
     <div class="actions">
       <button class="btn danger" id="delBtn" style="display:none">삭제</button>
-      <button class="btn ghost" id="cancelBtn">취소</button>
+      <button class="btn ghost" id="cancelBtn">닫기</button>
       <button class="btn primary" id="saveBtn">저장</button>
     </div>
   </div>
@@ -299,9 +303,10 @@
       <div class="field" style="flex:0 0 130px;"><label>납부일</label><input type="number" id="rfDay" min="1" max="31" placeholder="매월 N일"></div>
     </div>
     <div class="field"><label>분류</label><div class="catgrid" id="rfCatGrid"></div></div>
+    <label class="keeprow" id="keepRowR"><input type="checkbox" id="keepOpenR" checked> 저장 후 계속 입력하기</label>
     <div class="actions">
       <button class="btn danger" id="recurDel" style="display:none">삭제</button>
-      <button class="btn ghost" id="recurCancel">취소</button>
+      <button class="btn ghost" id="recurCancel">닫기</button>
       <button class="btn primary" id="recurSave">저장</button>
     </div>
   </div>
@@ -366,6 +371,7 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){toast
 let cur=new Date();cur.setDate(1);
 let editId=null, formType='expense', formCat='food';
 let editRecurId=null, recurCat='home';
+let addCount=0;
 
 /* ===== 유틸 ===== */
 const won=n=>n.toLocaleString('ko-KR')+'원';
@@ -432,17 +438,29 @@ function renderFixed(tx,inc){
     list.innerHTML='<div class="empty"><div class="em">📌</div><p>등록된 고정지출이 없어요.<br>＋ 관리에서 월세·통신비·구독료를 추가해 보세요.</p></div>';
     return;
   }
-  items.sort((a,b)=>(a.day||1)-(b.day||1));
-  list.innerHTML=items.map(r=>{
-    const c=findCat('expense',r.category);
-    const done=tx.some(t=>t.fixedId===r.id);
-    return '<div class="fx-row">'
-      +'<div class="ic" style="background:'+c.c+'1F">'+c.e+'</div>'
-      +'<div class="body"><div class="nm">'+esc(r.name)+'</div><div class="meta">'+c.n+' · 매월 '+(r.day||1)+'일</div></div>'
-      +'<div class="amt num">'+won(r.amount)+'</div>'
-      +'<button class="pill '+(done?'done':'todo')+'" data-pay="'+r.id+'">'+(done?'완료 ✓':'납부 처리')+'</button>'
-      +'</div>';
-  }).join('');
+  const periods=[
+    {label:'상순 · 1~10일',   lo:1,  hi:10},
+    {label:'중순 · 11~20일',  lo:11, hi:20},
+    {label:'하순 · 21일 이후', lo:21, hi:31}
+  ];
+  let html='';
+  periods.forEach(p=>{
+    const pin=items.filter(r=>{const d=Math.min(Math.max(1,r.day||1),31);return d>=p.lo&&d<=p.hi;}).sort((a,b)=>(a.day||1)-(b.day||1));
+    if(!pin.length)return;
+    const sub=pin.reduce((s,r)=>s+r.amount,0);
+    html+='<div class="fx-period"><span>'+p.label+'</span><span class="num">'+won(sub)+'</span></div>';
+    html+=pin.map(r=>{
+      const c=findCat('expense',r.category);
+      const done=tx.some(t=>t.fixedId===r.id);
+      return '<div class="fx-row">'
+        +'<div class="ic" style="background:'+c.c+'1F">'+c.e+'</div>'
+        +'<div class="body"><div class="nm">'+esc(r.name)+'</div><div class="meta">'+c.n+' · 매월 '+(r.day||1)+'일</div></div>'
+        +'<div class="amt num">'+won(r.amount)+'</div>'
+        +'<button class="pill '+(done?'done':'todo')+'" data-pay="'+r.id+'">'+(done?'완료 ✓':'납부 처리')+'</button>'
+        +'</div>';
+    }).join('');
+  });
+  list.innerHTML=html;
   list.querySelectorAll('[data-pay]').forEach(b=>b.addEventListener('click',()=>togglePay(Number(b.dataset.pay))));
 }
 
@@ -530,6 +548,7 @@ function openRecurAdd(){
   editRecurId=null;recurCat='home';
   document.getElementById('recurTitle').textContent='고정지출 추가';
   document.getElementById('recurDel').style.display='none';
+  document.getElementById('keepRowR').style.display='flex';
   document.getElementById('rfName').value='';
   document.getElementById('rfAmount').value='';
   document.getElementById('rfDay').value='';
@@ -541,6 +560,7 @@ function openRecurEdit(id){
   editRecurId=id;recurCat=r.category;
   document.getElementById('recurTitle').textContent='고정지출 수정';
   document.getElementById('recurDel').style.display='block';
+  document.getElementById('keepRowR').style.display='none';
   document.getElementById('rfName').value=r.name;
   document.getElementById('rfAmount').value=r.amount.toLocaleString('ko-KR');
   document.getElementById('rfDay').value=r.day||'';
@@ -556,10 +576,17 @@ function saveRecur(){
   if(editRecurId){
     const r=DB.recurring.find(x=>x.id===editRecurId);
     Object.assign(r,{name,amount:amt,day,category:recurCat});
-  }else{
-    DB.recurring.push({id:uid(),name,amount:amt,day,category:recurCat,active:true});
+    save();renderManage();render();closeSheets();openSheet('manageOverlay');toast('수정했어요');return;
   }
-  save();closeSheets();renderManage();render();toast(editRecurId?'수정했어요':'고정지출을 등록했어요 ✓');
+  DB.recurring.push({id:uid(),name,amount:amt,day,category:recurCat,active:true});
+  save();renderManage();render();
+  if(document.getElementById('keepOpenR').checked){
+    document.getElementById('rfName').value='';
+    document.getElementById('rfAmount').value='';
+    document.getElementById('rfDay').value='';
+    document.getElementById('rfName').focus();
+    toast('등록했어요 ✓  다음 항목을 입력하세요');
+  }else{closeSheets();openSheet('manageOverlay');toast('고정지출을 등록했어요 ✓');}
 }
 function delRecur(){
   if(!editRecurId)return;
@@ -576,9 +603,10 @@ function buildCatGrid(){
 }
 function setType(t){formType=t;document.querySelectorAll('#typeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===t));if(!CATS[t].some(c=>c.id===formCat))formCat=CATS[t][0].id;buildCatGrid();}
 function openAdd(){
-  editId=null;
+  editId=null;addCount=0;
   document.getElementById('sheetTitle').textContent='내역 추가';
   document.getElementById('delBtn').style.display='none';
+  document.getElementById('keepRow').style.display='flex';
   document.getElementById('fAmount').value='';document.getElementById('fMemo').value='';
   document.getElementById('fDate').value=ym(cur)===ym(new Date())?todayStr():ym(cur)+'-01';
   setType('expense');formCat='food';buildCatGrid();
@@ -589,6 +617,7 @@ function openEdit(id){
   editId=t.id;
   document.getElementById('sheetTitle').textContent='내역 수정';
   document.getElementById('delBtn').style.display='block';
+  document.getElementById('keepRow').style.display='none';
   document.getElementById('fAmount').value=t.amount.toLocaleString('ko-KR');
   document.getElementById('fMemo').value=t.memo||'';
   document.getElementById('fDate').value=t.date;
@@ -600,11 +629,19 @@ function saveTx(){
   if(!amt||amt<=0){toast('금액을 입력해 주세요');document.getElementById('fAmount').focus();return;}
   const date=document.getElementById('fDate').value||todayStr();
   const memo=document.getElementById('fMemo').value.trim();
-  if(editId){const t=DB.transactions.find(x=>x.id===editId);Object.assign(t,{type:formType,category:formCat,amount:amt,date,memo});}
-  else{DB.transactions.push({id:uid(),type:formType,category:formCat,amount:amt,date,memo});}
-  save();closeSheets();
-  const d=new Date(date+'T00:00:00');d.setDate(1);cur=d;
-  render();toast(editId?'수정했어요':'저장했어요 ✓');
+  if(editId){
+    const t=DB.transactions.find(x=>x.id===editId);Object.assign(t,{type:formType,category:formCat,amount:amt,date,memo});
+    save();closeSheets();const d=new Date(date+'T00:00:00');d.setDate(1);cur=d;render();toast('수정했어요');return;
+  }
+  DB.transactions.push({id:uid(),type:formType,category:formCat,amount:amt,date,memo});save();
+  const d=new Date(date+'T00:00:00');d.setDate(1);cur=d;render();
+  if(document.getElementById('keepOpen').checked){
+    addCount++;
+    document.getElementById('fAmount').value='';
+    document.getElementById('fMemo').value='';
+    document.getElementById('fAmount').focus();
+    toast('추가했어요 ✓  (이번에 '+addCount+'건)');
+  }else{closeSheets();toast('저장했어요 ✓');}
 }
 function delTx(){if(!editId)return;DB.transactions=DB.transactions.filter(x=>x.id!==editId);save();closeSheets();render();toast('삭제했어요');}
 
