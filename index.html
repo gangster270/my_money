@@ -2,8 +2,17 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>나의 가계부</title>
+<meta name="description" content="나만의 개인 가계부 앱 — 데이터는 내 기기에만 안전하게 저장돼요.">
+<meta name="theme-color" content="#3A5A50">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="가계부">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <style>
   @font-face{font-family:'Pretendard';src:url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/woff2/Pretendard-Regular.woff2') format('woff2');font-weight:400;font-display:swap;}
@@ -204,7 +213,7 @@
   <div class="topbar">
     <div class="brand">
       <div class="mark">₩</div>
-      <div><h1>나의 가계부</h1><div class="sub">이 PC에 안전하게 저장돼요</div></div>
+      <div><h1>나의 가계부</h1><div class="sub">내 기기에만 안전하게 저장돼요</div></div>
     </div>
     <button class="iconbtn" id="menuBtn">⚙ 설정</button>
   </div>
@@ -398,9 +407,11 @@
   <div class="sheet">
     <h3>백업 · 설정</h3>
     <div class="menu-list">
+      <button id="installApp" style="display:none"><span class="e">📱</span> 홈 화면에 앱 설치 <small>폰에서 앱처럼 사용</small></button>
+      <div class="sep" id="installSep" style="display:none"></div>
       <button id="menuCat"><span class="e">🏷️</span> 분류 관리 <small>구독 등 분류 추가·수정</small></button>
       <div class="sep"></div>
-      <button id="exportJson"><span class="e">💾</span> 백업 파일 저장 <small>이 PC로 내려받기 (.json)</small></button>
+      <button id="exportJson"><span class="e">💾</span> 백업 파일 저장 <small>이 기기로 내려받기 (.json)</small></button>
       <button id="importJson"><span class="e">📂</span> 백업 파일 불러오기 <small>다른 기기 / 복원</small></button>
       <div class="sep"></div>
       <button id="exportCsv"><span class="e">📊</span> CSV로 내보내기 <small>엑셀·분석용</small></button>
@@ -1060,6 +1071,30 @@ document.getElementById('catSave').onclick=saveCat;
 document.getElementById('catDel').onclick=()=>{if(editCatId)delCat(editCatId);};
 document.getElementById('catCancel').onclick=()=>{closeSheet('catFormOverlay');catReturn=null;};
 document.getElementById('cfCatEmoji').addEventListener('input',e=>{const v=Array.from((e.target.value||'').trim())[0]||'';catEmoji=v;document.querySelectorAll('#emojiSug button').forEach(x=>x.classList.toggle('on',x.dataset.e===catEmoji));});
+
+/* ===== PWA: 앱 설치 · 오프라인 ===== */
+if('serviceWorker' in navigator && location.protocol!=='file:'){
+  window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});
+}
+let deferredPrompt=null;
+const installBtn=document.getElementById('installApp');
+const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const isIos=/iphone|ipad|ipod/i.test(navigator.userAgent);
+function showInstallMenu(v){installBtn.style.display=v?'flex':'none';document.getElementById('installSep').style.display=v?'block':'none';}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;if(!isStandalone())showInstallMenu(true);});
+if(isIos&&!isStandalone())showInstallMenu(true);
+installBtn.addEventListener('click',async()=>{
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    const r=await deferredPrompt.userChoice;deferredPrompt=null;
+    if(r.outcome==='accepted'){showInstallMenu(false);toast('홈 화면에 설치했어요 📱');}
+  }else if(isIos){
+    alert('iPhone에서 앱으로 설치하기\n\n1. Safari 하단의 공유 버튼(□↑)을 눌러요\n2. "홈 화면에 추가"를 선택해요\n3. 홈 화면의 가계부 아이콘으로 앱처럼 열려요');
+  }else{
+    alert('브라우저 메뉴(⋮)에서 "앱 설치" 또는 "홈 화면에 추가"를 누르면 앱처럼 쓸 수 있어요.');
+  }
+});
+window.addEventListener('appinstalled',()=>{showInstallMenu(false);toast('앱이 설치됐어요 📱');});
 
 /* 시작 */
 load();render();
