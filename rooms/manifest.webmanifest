@@ -1,0 +1,17 @@
+{
+  "name": "회의실 예약",
+  "short_name": "회의실",
+  "description": "QR로 접속해서 바로 예약하는 사내 회의실 예약 시스템",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F5F4F1",
+  "theme_color": "#2F5D62",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
